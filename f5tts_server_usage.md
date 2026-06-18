@@ -3,7 +3,7 @@
 ## 依赖安装
 
 ```bash
-pip install tornado
+pip install -r requirements.txt
 ```
 
 ---
