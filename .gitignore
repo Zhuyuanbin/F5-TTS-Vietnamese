@@ -3,3 +3,5 @@
 /data/your_training_dataset_non_preprocessed/
 /ckpts/your_training_dataset/
 /preprocess
+*.ini
+*.pyc
