@@ -75,6 +75,18 @@ default_args = {
 }
 
 
+def _clean_text(value):
+    return str(value or "").strip()
+
+
+def _resolve_ref_text(params, ref_audio_provided):
+    if "ref_text" in params:
+        return _clean_text(params.get("ref_text"))
+    if ref_audio_provided:
+        return ""
+    return _clean_text(default_args["ref_text"])
+
+
 # ---------------------------------------------------------------------------
 # 模型管理
 # ---------------------------------------------------------------------------
@@ -254,14 +266,16 @@ class TTSHandler(tornado.web.RequestHandler):
                 return tmp_path
 
             ref_audio_uploaded = save_uploaded_audio("ref_audio")
+            ref_audio_path = params.get("ref_audio_path", "").strip()
+            ref_audio_provided = ref_audio_uploaded is not None or bool(ref_audio_path)
 
             # 参考音频优先级：上传文件 > ref_audio_path > 默认
             ref_audio = (
                 ref_audio_uploaded
-                or params.get("ref_audio_path", "").strip()
+                or ref_audio_path
                 or default_args["ref_audio"]
             )
-            ref_text    = params.get("ref_text", "").strip() or default_args["ref_text"]
+            ref_text    = _resolve_ref_text(params, ref_audio_provided)
             gen_text    = params.get("gen_text", "").strip()
             speed       = float(params.get("speed", default_args["speed"]))
             model_name  = params.get("model", default_args["model"]).strip() or default_args["model"]
@@ -284,8 +298,9 @@ class TTSHandler(tornado.web.RequestHandler):
                 return
 
             ref_audio_uploaded = None
+            ref_audio_provided = bool(_clean_text(params.get("ref_audio"))) if "ref_audio" in params else False
             ref_audio    = params.get("ref_audio", default_args["ref_audio"])
-            ref_text     = params.get("ref_text", default_args["ref_text"])
+            ref_text     = _resolve_ref_text(params, ref_audio_provided)
             gen_text     = params.get("gen_text", "").strip()
             speed        = float(params.get("speed", default_args["speed"]))
             model_name   = params.get("model", default_args["model"])
@@ -328,8 +343,10 @@ class TTSHandler(tornado.web.RequestHandler):
             tmp_output_path = os.path.join(OUTPUTS_DIR, out_filename)
 
             logger.info(
-                "TTS request | gen_text_len=%d | ref_audio=%s | speed=%.1f | uploaded=%s",
-                len(gen_text), ref_audio, speed, ref_audio_uploaded is not None,
+                "TTS request | gen_text_len=%d | ref_audio=%s | speed=%.1f | ref_text=%s | uploaded=%s",
+                len(gen_text), ref_audio, speed,
+                "provided" if ref_text else "<auto>",
+                ref_audio_uploaded is not None,
             )
             t0 = time.perf_counter()
 
@@ -340,8 +357,7 @@ class TTSHandler(tornado.web.RequestHandler):
                 file_wave=tmp_output_path,
                 show_info=lambda x: logger.info("F5TTS: %s", x),
             )
-            if ref_text:
-                infer_kwargs["ref_text"] = ref_text
+            infer_kwargs["ref_text"] = ref_text
 
             with model_lock:
                 wav, sr, _ = model.infer(**infer_kwargs)

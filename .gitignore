@@ -5,3 +5,4 @@
 /preprocess
 *.ini
 *.pyc
+outputs/

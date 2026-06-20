@@ -83,7 +83,7 @@ curl http://localhost:9000/health
 |------|------|--------|------|
 | `gen_text` | string | — | **必填**，待合成文本 |
 | `ref_audio` | string | `--ref_audio` | 服务器本地参考音频路径 |
-| `ref_text` | string | `--ref_text` | 参考音频对应文本 |
+| `ref_text` | string | `--ref_text` | 参考音频对应文本；指定 `ref_audio` 但留空/省略时自动转写参考音频 |
 | `speed` | float | `1.0` | 语速 |
 | `model` | string | `F5TTS_Base` | 模型名称 |
 | `vocoder_name` | string | `vocos` | Vocoder 名称 |
@@ -106,6 +106,16 @@ curl -X POST http://localhost:9000/tts \
     "gen_text": "mình muốn ra nước ngoài để tiếp xúc nhiều công ty lớn",
     "ref_audio": "ref2.wav",
     "ref_text": "văn bản tham chiếu",
+    "speed": 1.2
+  }' \
+  --output output.wav
+
+# 指定参考音频但不提供参考文本，服务会自动转写参考音频
+curl -X POST http://localhost:9000/tts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gen_text": "mình muốn ra nước ngoài để tiếp xúc nhiều công ty lớn",
+    "ref_audio": "ref2.wav",
     "speed": 1.2
   }' \
   --output output.wav
